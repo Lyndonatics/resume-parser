@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Parser — AI-Powered Employment History Formatter</title>
+<meta name="description" content="Paste any resume text and get a clean, structured employment history — tenure, gaps, overlaps calculated automatically.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --border: #2a2a2e;
+    --accent: #c8f05a;
+    --accent2: #5af0c8;
+    --text: #e8e8e8;
+    --muted: #7a7a85;
+    --danger: #ff6b6b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BG */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,240,90,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,240,90,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14,14,15,0.85);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+    font-weight: 400;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--accent) !important;
+    color: #0e0e0f !important;
+    padding: 7px 16px;
+    border-radius: 7px;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    transition: background 0.15s, transform 0.15s !important;
+  }
+  .nav-cta:hover { background: #d8ff6a !important; transform: translateY(-1px); }
+
+  /* SECTIONS */
+  section { position: relative; z-index: 1; }
+
+  /* HERO */
+  .hero {
+    min-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px 60px;
+    gap: 24px;
+  }
+  .hero-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(200,240,90,0.08);
+    border: 1px solid rgba(200,240,90,0.2);
+    padding: 5px 14px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 7vw, 80px);
+    line-height: 1.05;
+    max-width: 820px;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero-sub {
+    color: var(--muted);
+    font-size: clamp(14px, 2vw, 17px);
+    max-width: 540px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .btn-hero-primary {
+    background: var(--accent);
+    color: #0e0e0f;
+    padding: 14px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-hero-primary:hover { background: #d8ff6a; transform: translateY(-2px); }
+  .btn-hero-ghost {
+    background: transparent;
+    color: var(--text);
+    padding: 14px 30px;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-hero-ghost:hover { border-color: var(--muted); background: var(--surface); transform: translateY(-2px); }
+
+  .hero-scroll {
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0.4;
+    animation: bobble 2.2s ease-in-out infinite;
+  }
+  @keyframes bobble { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+  /* STATS BAR */
+  .stats-bar {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    flex-wrap: wrap;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* FEATURES */
+  .features {
+    padding: 90px 24px;
+    max-width: 1060px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 4vw, 42px);
+    line-height: 1.15;
+    margin-bottom: 48px;
+    max-width: 500px;
+  }
+  .section-title span { color: var(--accent); }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feat-card:hover { border-color: rgba(200,240,90,0.25); transform: translateY(-3px); }
+  .feat-icon {
+    width: 40px; height: 40px;
+    background: rgba(200,240,90,0.08);
+    border: 1px solid rgba(200,240,90,0.15);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  .feat-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .feat-desc { font-size: 13px; color: var(--muted); line-height: 1.65; font-weight: 300; }
+
+  /* FORMAT PREVIEW */
+  .format-section {
+    padding: 80px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .format-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  @media(max-width:640px){ .format-inner { grid-template-columns: 1fr; } }
+  .format-code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .code-header {
+    background: var(--surface2);
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 7px;
+    align-items: center;
+  }
+  .cdot { width: 10px; height: 10px; border-radius: 50%; }
+  .code-body {
+    padding: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+    color: var(--muted);
+  }
+  .ck { color: var(--accent); }
+  .cv { color: var(--accent2); }
+  .format-text .section-title { margin-bottom: 16px; }
+  .format-text p { color: var(--muted); font-size: 14px; line-height: 1.7; font-weight: 300; margin-bottom: 14px; }
+  .check-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .check-list li {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-weight: 300;
+  }
+  .check-list li::before {
+    content: '✓';
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  /* APP SECTION */
+  .app-section {
+    padding: 90px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .app-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .app-bar {
+    background: var(--surface2);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-bar-dots { display: flex; gap: 7px; }
+  .app-bar-dots span { width: 12px; height: 12px; border-radius: 50%; }
+  .app-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 460px;
+  }
+  @media(max-width:680px){ .app-inner { grid-template-columns: 1fr; } }
+  .app-left {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .app-col-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255,255,255,0.02);
+  }
+  textarea#demoInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    padding: 18px;
+    caret-color: var(--accent);
+  }
+  textarea#demoInput::placeholder { color: var(--muted); opacity: 0.4; }
+  .app-right { display: flex; flex-direction: column; }
+  .output-area {
+    flex: 1;
+    padding: 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+  }
+  .output-area.empty { color: var(--muted); opacity: 0.3; font-style: italic; }
+  .app-footer {
+    border-top: 1px solid var(--border);
+    padding: 13px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status-row { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .spinner2 { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  .spinner2.on { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-parse {
+    background: var(--accent);
+    color: #0e0e0f;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-parse:hover { background: #d8ff6a; transform: translateY(-1px); }
+  .btn-parse:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .btn-copy2 {
+    background: rgba(90,240,200,0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(90,240,200,0.2);
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: none;
+  }
+  .btn-copy2.show { display: block; }
+  .btn-copy2:hover { background: rgba(90,240,200,0.2); }
+  .err { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--danger); padding: 8px 18px; border-top: 1px solid rgba(255,107,107,0.15); display: none; }
+  .err.on { display: block; }
+
+  /* HOW IT WORKS */
+  .how-section {
+    padding: 90px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .how-inner { max-width: 780px; margin: 0 auto; }
+  .steps { display: flex; flex-direction: column; gap: 0; margin-top: 48px; }
+  .step {
+    display: flex;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    color: rgba(200,240,90,0.2);
+    line-height: 1;
+    min-width: 44px;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .step-desc { color: var(--muted); font-size: 13px; line-height: 1.65; font-weight: 300; }
+
+  /* FOOTER */
+  footer {
+    padding: 36px 24px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    opacity: 0.45;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fade-in { animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">resume-parser</a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#demo">Demo</a>
+    <a href="#how">How it works</a>
+    <a href="https://github.com" target="_blank" class="nav-cta">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <span class="hero-badge">AI-Powered · Claude API</span>
+  <h1>Parse any resume into a<br><em>structured format</em></h1>
+  <p class="hero-sub">Paste raw resume text and get a clean, consistent employment history — tenure, gaps, and overlaps calculated automatically.</p>
+  <div class="hero-actions">
+    <a href="#demo" class="btn-hero-primary">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Try the Parser
+    </a>
+    <a href="https://github.com" target="_blank" class="btn-hero-ghost">
+      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.1.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.13 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+  <span class="hero-scroll">↓ scroll</span>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Resumes Supported</div></div>
+  <div class="stat"><div class="stat-num">1</div><div class="stat-label">Locked Output Format</div></div>
+  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Setup Required</div></div>
+  <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Browser-Based</div></div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <p class="section-label">// features</p>
+  <h2 class="section-title">Everything you need to <span>normalize</span> resumes</h2>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <div class="feat-title">Locked Output Format</div>
+      <div class="feat-desc">Every result follows the exact same structure — no variation, no surprises. Copy-paste ready every time.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🧮</div>
+      <div class="feat-title">Tenure Calculation</div>
+      <div class="feat-desc">Automatically computes years and months for each role, including present-day jobs calculated up to today.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⏳</div>
+      <div class="feat-title">Gap Detection</div>
+      <div class="feat-desc">Identifies unemployment gaps between jobs — and flags how long the candidate has been out of work if currently unemployed.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔀</div>
+      <div class="feat-title">Overlap Detection</div>
+      <div class="feat-desc">Catches when a candidate started a new job before leaving the previous one and notes the overlap duration.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏢</div>
+      <div class="feat-title">Company Grouping</div>
+      <div class="feat-desc">Multiple roles at the same company are merged into a single entry, keeping the output clean and readable.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title">Instant Results</div>
+      <div class="feat-desc">Powered by Claude Sonnet 4. Paste your text, hit parse, and get structured output in seconds.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FORMAT PREVIEW -->
+<section class="format-section">
+  <div class="format-inner">
+    <div class="format-code">
+      <div class="code-header">
+        <span class="cdot" style="background:#ff5f57"></span>
+        <span class="cdot" style="background:#febc2e"></span>
+        <span class="cdot" style="background:#28c840"></span>
+      </div>
+      <div class="code-body">
+<span class="ck">1.</span> <span class="ck">Company:</span> Acme Corp<br>
+<span class="ck">Position:</span> <span class="cv">Senior Recruiter</span><br>
+<span class="ck">Tenure:</span> <span class="cv">Jan 2022 – Present = 3 yrs 4 mos</span><br>
+<span class="ck">Work schedule and shift:</span><br>
+<span class="ck">Company overview:</span><br>
+<span class="ck">Tools:</span><br>
+<span class="ck">Tasks:</span><br>
+<span class="ck">Reason for leaving:</span><br>
+<span class="ck">Gap:</span> <span class="cv">None</span><br>
+<span class="ck">Overlap:</span> <span class="cv">None</span><br>
+<br>
+<span class="ck">2.</span> <span class="ck">Company:</span> StartupXYZ<br>
+<span class="ck">Position:</span> <span class="cv">HR Associate</span><br>
+<span class="ck">Tenure:</span> <span class="cv">Mar 2020 – Dec 2021 = 1 yr 9 mos</span><br>
+<span class="ck">Work schedule and shift:</span><br>
+<span class="ck">Company overview:</span><br>
+<span class="ck">Tools:</span><br>
+<span class="ck">Tasks:</span><br>
+<span class="ck">Reason for leaving:</span><br>
+<span class="ck">Gap:</span> <span class="cv">Jan 2022 – Jan 2022 (1 month)</span><br>
+<span class="ck">Overlap:</span> <span class="cv">None</span>
+      </div>
+    </div>
+    <div class="format-text">
+      <p class="section-label">// output format</p>
+      <h2 class="section-title">One format.<br><span>Always.</span></h2>
+      <p>The output structure is locked and never changes — making it easy to copy into spreadsheets, ATS tools, or documentation without reformatting.</p>
+      <ul class="check-list">
+        <li>Most recent employer listed first</li>
+        <li>Blank fields left empty for manual completion</li>
+        <li>Gaps under 1 month always show as "None"</li>
+        <li>Overlaps noted with company name for clarity</li>
+        <li>Currently employed roles calculate to today</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE DEMO -->
+<section class="app-section" id="demo">
+  <p class="section-label">// live demo</p>
+  <h2 class="section-title" style="margin-bottom:28px;">Try it <span>right here</span></h2>
+  <div class="app-wrap">
+    <div class="app-bar">
+      <div class="app-bar-dots">
+        <span style="background:#ff5f57"></span>
+        <span style="background:#febc2e"></span>
+        <span style="background:#28c840"></span>
+      </div>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">resume-parser · live</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);background:rgba(200,240,90,0.08);padding:3px 9px;border-radius:4px;border:1px solid rgba(200,240,90,0.2);">LOCKED FORMAT</span>
+    </div>
+    <div class="app-inner">
+      <div class="app-left">
+        <div class="app-col-header">Resume Input</div>
+        <textarea id="demoInput" placeholder="Paste resume text here...
+
+Example:
+Acme Corp — Senior Recruiter
+January 2022 – Present
+
+StartupXYZ — HR Associate
+March 2020 – December 2021
+
+Ctrl + Enter to parse"></textarea>
+      </div>
+      <div class="app-right">
+        <div class="app-col-header">Formatted Output</div>
+        <div class="output-area empty" id="demoOutput">Parsed results will appear here...</div>
+        <div class="err" id="demoErr"></div>
+        <div class="app-footer">
+          <div class="status-row">
+            <div class="spinner2" id="spin2"></div>
+            <span id="stat2">Waiting for input</span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-copy2" id="copy2" onclick="copyDemo()">Copy</button>
+            <button class="btn-parse" id="parseBtn2" onclick="runParse()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Parse
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <p class="section-label">// how it works</p>
+    <h2 class="section-title">Simple by <span>design</span></h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-title">Paste the resume text</div>
+          <div class="step-desc">Copy any raw resume text — doesn't matter if it's messy, inconsistent, or missing punctuation. The parser handles it.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-title">Claude extracts and calculates</div>
+          <div class="step-desc">The Anthropic Claude API reads the text, identifies all employment entries, groups roles by company, and computes tenure, gaps, and overlaps.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-title">Copy the structured output</div>
+          <div class="step-desc">Every result is formatted identically — numbered, sorted by recency, with blank fields ready for you to fill in manually.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <div class="step-title">No setup. No installs. Browser only.</div>
+          <div class="step-desc">Just open the HTML file. Everything runs in the browser. No frameworks, no dependencies, no server required.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>resume-parser · built with Claude Sonnet 4 · Anthropic API</span>
+  <span>open source · MIT license</span>
+</footer>
+
+<script>
+const TODAY = new Date();
+const SYSTEM = `You are a resume parser. Your ONLY job is to extract employment data and output it in one strict, locked format. No commentary, no markdown, no extra text — output ONLY the formatted entries.
+
+TODAY'S DATE: ${TODAY.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}
+
+═══ LOCKED RULES ═══
+ORDER: Most recent company first, oldest last.
+GROUPING: If a person held multiple positions at the same company, group them into ONE entry.
+TENURE FORMAT: "Month YYYY – Month YYYY = X years and Y months"
+- If less than 1 year: write only months — NEVER write "0 years"
+- If still employed: use "Present", calculate up to today
+GAP RULE: Gap = unemployment period between leaving one job and starting the next.
+- Format: "Month YYYY – Month YYYY (X months)"
+- If gap < 1 month: write exactly "None"
+- For MOST RECENT entry: calculate gap from end date to TODAY. If still employed or < 1 month: "None"
+OVERLAP RULE: Overlap = started new job before leaving previous one.
+- Format: "X months with [Company Name]"
+- If overlap < 1 month: write exactly "None"
+BLANK FIELDS — always leave empty: Work schedule and shift / Company overview / Tools / Tasks / Reason for leaving
+
+═══ OUTPUT FORMAT ═══
+[N]. Company: [Name]
+Position: [Position(s)]
+Tenure: [Month YYYY – Month YYYY = X years and Y months]
+Work schedule and shift: 
+Company overview: 
+Tools: 
+Tasks:
+Reason for leaving: 
+Gap: [result]
+Overlap: [result]
+
+Output ONLY the entries. Nothing else.`;
+
+async function runParse() {
+  const input = document.getElementById('demoInput').value.trim();
+  if (!input) { showErr('Please paste some resume text first.'); return; }
+  const btn = document.getElementById('parseBtn2');
+  const sp = document.getElementById('spin2');
+  const st = document.getElementById('stat2');
+  const out = document.getElementById('demoOutput');
+  const cp = document.getElementById('copy2');
+  const err = document.getElementById('demoErr');
+  btn.disabled = true; sp.classList.add('on'); st.textContent = 'Parsing...';
+  out.textContent = ''; out.classList.remove('empty','fade-in');
+  cp.classList.remove('show'); err.classList.remove('on');
+  try {
+    const res = await fetch('http://localhost:3000/parse', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+  resume: input
+})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const result = data.content?.map(b => b.text||'').join('').trim();
+    if (!result) throw new Error('Empty response.');
+    out.textContent = result;
+    out.classList.add('fade-in');
+    cp.classList.add('show');
+    st.textContent = 'Done ✓';
+  } catch(e) {
+    showErr('Error: ' + e.message);
+    st.textContent = 'Failed';
+    out.textContent = 'Parsed results will appear here...';
+    out.classList.add('empty');
+  } finally {
+    btn.disabled = false; sp.classList.remove('on');
+  }
+}
+function copyDemo() {
+  const text = document.getElementById('demoOutput').textContent;
+  const btn = document.getElementById('copy2');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+function showErr(msg) {
+  const e = document.getElementById('demoErr');
+  e.textContent = msg; e.classList.add('on');
+}
+document.getElementById('demoInput').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') runParse();
+});
+</script>
+</body>
+</html>
