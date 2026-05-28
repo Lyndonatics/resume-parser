@@ -514,7 +514,7 @@
   <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Resumes Supported</div></div>
   <div class="stat"><div class="stat-num">1</div><div class="stat-label">Locked Output Format</div></div>
   <div class="stat"><div class="stat-num">0</div><div class="stat-label">Setup Required</div></div>
-  <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Browser-Based</div></div>
+  <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Secure API</div></div>
 </div>
 
 <!-- FEATURES -->
@@ -683,8 +683,8 @@ Ctrl + Enter to parse"></textarea>
       <div class="step">
         <div class="step-num">04</div>
         <div class="step-content">
-          <div class="step-title">No setup. No installs. Browser only.</div>
-          <div class="step-desc">Just open the HTML file. Everything runs in the browser. No frameworks, no dependencies, no server required.</div>
+          <div class="step-title">API key stays secure — always.</div>
+          <div class="step-desc">The Anthropic API key never touches the browser. Every request goes through a serverless backend function, so your credentials stay private and can never be extracted from the page.</div>
         </div>
       </div>
     </div>
@@ -697,40 +697,6 @@ Ctrl + Enter to parse"></textarea>
 </footer>
 
 <script>
-const TODAY = new Date();
-const SYSTEM = `You are a resume parser. Your ONLY job is to extract employment data and output it in one strict, locked format. No commentary, no markdown, no extra text — output ONLY the formatted entries.
-
-TODAY'S DATE: ${TODAY.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}
-
-═══ LOCKED RULES ═══
-ORDER: Most recent company first, oldest last.
-GROUPING: If a person held multiple positions at the same company, group them into ONE entry.
-TENURE FORMAT: "Month YYYY – Month YYYY = X years and Y months"
-- If less than 1 year: write only months — NEVER write "0 years"
-- If still employed: use "Present", calculate up to today
-GAP RULE: Gap = unemployment period between leaving one job and starting the next.
-- Format: "Month YYYY – Month YYYY (X months)"
-- If gap < 1 month: write exactly "None"
-- For MOST RECENT entry: calculate gap from end date to TODAY. If still employed or < 1 month: "None"
-OVERLAP RULE: Overlap = started new job before leaving previous one.
-- Format: "X months with [Company Name]"
-- If overlap < 1 month: write exactly "None"
-BLANK FIELDS — always leave empty: Work schedule and shift / Company overview / Tools / Tasks / Reason for leaving
-
-═══ OUTPUT FORMAT ═══
-[N]. Company: [Name]
-Position: [Position(s)]
-Tenure: [Month YYYY – Month YYYY = X years and Y months]
-Work schedule and shift: 
-Company overview: 
-Tools: 
-Tasks:
-Reason for leaving: 
-Gap: [result]
-Overlap: [result]
-
-Output ONLY the entries. Nothing else.`;
-
 async function runParse() {
   const input = document.getElementById('demoInput').value.trim();
   if (!input) { showErr('Please paste some resume text first.'); return; }
@@ -744,7 +710,7 @@ async function runParse() {
   out.textContent = ''; out.classList.remove('empty','fade-in');
   cp.classList.remove('show'); err.classList.remove('on');
   try {
-    const res = await fetch('http://localhost:3000/parse', {
+    const res = await fetch('/.netlify/functions/parse', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
